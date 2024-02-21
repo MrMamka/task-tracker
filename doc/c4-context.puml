@@ -1,0 +1,28 @@
+@startuml context
+
+skinparam rectangle {
+    BackgroundColor MediumPurple
+    BorderColor Indigo
+    FontColor White
+}
+skinparam actor {
+    BackgroundColor Plum
+    BorderColor Purple
+    FontColor Black
+}
+skinparam database {
+    BackgroundColor MediumOrchid
+    BorderColor DarkMagenta
+    FontColor LavenderBlush
+}
+
+rectangle Website
+rectangle API
+actor User
+database DataBase
+
+User -right-> Website : Uses
+Website -> API : Sends requests
+API --> DataBase : Stores data
+
+@enduml

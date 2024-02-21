@@ -1,0 +1,37 @@
+@startuml containers
+
+skinparam rectangle {
+    BackgroundColor MediumPurple
+    BorderColor Indigo
+    FontColor White
+}
+skinparam database {
+    BackgroundColor MediumOrchid
+    BorderColor DarkMagenta
+    FontColor LavenderBlush
+}
+skinparam queue {
+    BackgroundColor Plum
+    BorderColor Purple
+    FontColor White
+}
+
+rectangle "Frontend\n[Angular]" as Frontend
+rectangle "Main Service\nAuth and register\n[Go]" as MainService
+database "Auth DB\n[PostgreSQL]" as AuthDB
+rectangle "Posts&Comments\nService\n[Go]" as PostsService
+database "Posts DB\n[PostgreSQL]" as PostsDB
+rectangle "Statistics\nLikes and views\n[Go]" as StatsService
+database "Stats DB\n[ClickHouse]" as StatsDB 
+queue "Message Broker\n[Kafka]" as Kafka
+
+Frontend -[#0000ff]-> MainService : "HTTPS"
+MainService -[#0000ff]-> StatsService : "gRPC"
+MainService -[#0000ff]-> PostsService : "gRPC"
+MainService -[#42aaff]-> AuthDB : "reads/writes\nuser data"
+PostsService -[#42aaff]-> PostsDB : "stores posts\nand comments"
+StatsService -[#42aaff]-> StatsDB : "stores stats data"
+MainService -[#0000ff]-> Kafka : "publishes stats"
+Kafka -[#0000ff]-> StatsService : "consumes stats"
+
+@enduml
