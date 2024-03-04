@@ -1,37 +1,29 @@
 @startuml containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-skinparam rectangle {
-    BackgroundColor MediumPurple
-    BorderColor Indigo
-    FontColor White
-}
-skinparam database {
-    BackgroundColor MediumOrchid
-    BorderColor DarkMagenta
-    FontColor LavenderBlush
-}
-skinparam queue {
-    BackgroundColor Plum
-    BorderColor Purple
-    FontColor White
+LAYOUT_WITH_LEGEND()
+
+System_Boundary(c1, "API") {
+    Container(frontend, "Frontend", "Angular", "Frontend application.")
+    Container(mainService, "Main Service\nAuth and register", "Go", "Handles authentication and registration.")
+    Container(postsService, "Posts&Comments\nService", "Go", "Manages posts and comments.")
+    Container(statsService, "Statistics\nLikes and views", "Go", "Handles statistics like likes and views.")
+    ContainerQueue(kafka, "Message Broker", "Kafka", "For event messaging.")
 }
 
-rectangle "Frontend\n[Angular]" as Frontend
-rectangle "Main Service\nAuth and register\n[Go]" as MainService
-database "Auth DB\n[PostgreSQL]" as AuthDB
-rectangle "Posts&Comments\nService\n[Go]" as PostsService
-database "Posts DB\n[PostgreSQL]" as PostsDB
-rectangle "Statistics\nLikes and views\n[Go]" as StatsService
-database "Stats DB\n[ClickHouse]" as StatsDB 
-queue "Message Broker\n[Kafka]" as Kafka
+System_Boundary(db, "Databases") {
+    ContainerDb(authDb, "Auth DB", "PostgreSQL", "Stores user authentication data.")
+    ContainerDb(postsDb, "Posts DB", "PostgreSQL", "Stores posts and comments.")
+    ContainerDb(statsDb, "Stats DB", "ClickHouse", "Stores statistics data.")
+}
 
-Frontend -[#0000ff]-> MainService : "HTTPS"
-MainService -[#0000ff]-> StatsService : "gRPC"
-MainService -[#0000ff]-> PostsService : "gRPC"
-MainService -[#42aaff]-> AuthDB : "reads/writes\nuser data"
-PostsService -[#42aaff]-> PostsDB : "stores posts\nand comments"
-StatsService -[#42aaff]-> StatsDB : "stores stats data"
-MainService -[#0000ff]-> Kafka : "publishes stats"
-Kafka -[#0000ff]-> StatsService : "consumes stats"
+Rel(frontend, mainService, "HTTPS")
+Rel(mainService, statsService, "gRPC")
+Rel(mainService, postsService, "gRPC")
+Rel(mainService, authDb, "Reads/Writes\nuser data")
+Rel(postsService, postsDb, "Stores posts\nand comments")
+Rel(statsService, statsDb, "Stores stats data")
+Rel(mainService, kafka, "Publishes stats")
+Rel(kafka, statsService, "Consumes stats")
 
 @enduml

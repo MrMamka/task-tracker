@@ -1,28 +1,16 @@
 @startuml context
 
-skinparam rectangle {
-    BackgroundColor MediumPurple
-    BorderColor Indigo
-    FontColor White
-}
-skinparam actor {
-    BackgroundColor Plum
-    BorderColor Purple
-    FontColor Black
-}
-skinparam database {
-    BackgroundColor MediumOrchid
-    BorderColor DarkMagenta
-    FontColor LavenderBlush
-}
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-rectangle Website
-rectangle API
-actor User
-database DataBase
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include FONTAWESOME/user.puml
+!include FONTAWESOME/desktop.puml
 
-User -right-> Website : Uses
-Website -> API : Sends requests
-API --> DataBase : Stores data
+Person(user, "User", "Want to use task tracker", $sprite="user")
+Container(spa, "Task Tracker", "website", "The main interface that the user interacts with", $sprite="desktop")
+
+Rel(user, spa, "Uses")
+
+SHOW_FLOATING_LEGEND()
 
 @enduml
