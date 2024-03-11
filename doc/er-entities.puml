@@ -1,0 +1,52 @@
+plantuml
+@startuml entities
+
+entity User {
+    +ID: int
+    --
+    Username: string
+    Password (hash): string
+}
+
+entity "Task" as Post {
+    +ID: int
+    --
+    Owner: ID
+    Title: string
+    Content: string
+    Creation time: timestamp
+}
+
+entity Comment {
+    +ID: int
+    --
+    Author: ID
+    Task: ID
+    Text: string
+    Creation time: timestamp
+    Comments: []ID
+}
+
+entity Stats {
+    Likes: []Like
+    Views: []View
+}
+
+entity Like {
+    Owner: ID
+    Post: ID
+}
+
+entity View {
+    Owner: ID
+    Post: ID
+}
+
+User ||..o{ Post : "Creates"
+Post ||..o{ Comment : "Contains"
+Post ||..|{ Stats : "Associated with"
+User ||..o{ Comment : "Creates"
+User ||..o{ Like : "Creates"
+User ||..o{ View : "Creates"
+
+@enduml

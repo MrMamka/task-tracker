@@ -1,0 +1,29 @@
+@startuml containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+System_Boundary(c1, "API") {
+    Container(frontend, "Frontend", "Angular", "Frontend application.")
+    Container(mainService, "Main Service\nAuth and register", "Go", "Handles authentication and registration.")
+    Container(postsService, "Posts&Comments\nService", "Go", "Manages posts and comments.")
+    Container(statsService, "Statistics\nLikes and views", "Go", "Handles statistics like likes and views.")
+    ContainerQueue(kafka, "Message Broker", "Kafka", "For event messaging.")
+}
+
+System_Boundary(db, "Databases") {
+    ContainerDb(authDb, "Auth DB", "PostgreSQL", "Stores user authentication data.")
+    ContainerDb(postsDb, "Posts DB", "PostgreSQL", "Stores posts and comments.")
+    ContainerDb(statsDb, "Stats DB", "ClickHouse", "Stores statistics data.")
+}
+
+Rel(frontend, mainService, "HTTPS")
+Rel(mainService, statsService, "gRPC")
+Rel(mainService, postsService, "gRPC")
+Rel(mainService, authDb, "Reads/Writes\nuser data")
+Rel(postsService, postsDb, "Stores posts\nand comments")
+Rel(statsService, statsDb, "Stores stats data")
+Rel(mainService, kafka, "Publishes stats")
+Rel(kafka, statsService, "Consumes stats")
+
+@enduml
