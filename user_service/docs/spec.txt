@@ -1,0 +1,16 @@
+Регистрация:
+curl -v -X POST 'localhost:8080/register' \
+--data '{"login": "kek", "password": "Kekpassword123"}'
+
+Авторизация:
+curl -v -X POST 'localhost:8080/login' \
+--data '{"login": "kek", "password": "Kekpassword123"}'
+
+Обновление данных:
+curl -v -X PUT 'localhost:8080/update-info' \
+--data '{"mail": "kek@mail.ru"}' \
+-H "Cookie: jwt="
+
+Тестовая ручка для получения данных:
+curl -v GET 'localhost:8080/info' \
+-H "Cookie: jwt="

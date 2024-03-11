@@ -1,0 +1,103 @@
+# Думаю, предполагалось, что я использую фреймворк, который сможет сгенерировать этот файл,
+# но я не использовал таких фреймворков, поэтому опишу руками
+# Также, чтобы точно всё было понятно оставил curl'ы для каждой ручки в spec.txt
+
+info:
+  version: "1.0"
+  title: Сервис пользователей
+host: localhost:8080
+basePath: "/"
+schemes:
+- "http"
+paths:
+  /register:
+    post:
+      summary: Регистрация нового пользователя
+      description: Создаёт нового пользователя на основе предоставленного логина и пароля.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+            required:
+              - login
+              - password
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+        '400':
+          description: Невалидные данные / пользователь существует
+        '500':
+          description: Внутренняя ошибка сервера
+  /login:
+    post:
+      summary: Вход пользователя
+      description: Аутентифицирует пользователя на основе адреса логина и пароля, и отправляет токен для аутентификации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+            required:
+              - login
+              - password
+      responses:
+        '200':
+          description: Вход успешен
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Сессионный cookie
+        '400':
+          description: Невалидные данные
+        '500':
+          description: Внутренняя ошибка сервера
+  /update-info:
+    put:
+      summary: Обновление данных
+      description: Обновляет данные о пользователе
+      parameters:
+      - name: "jwt"
+        in: "header"
+        description: "JWT передается через cookie в заголовке."
+        required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+                birth_day:
+                  type: string
+                  format: dd/mm/YYYY
+                mail:
+                  type: string
+                phone_number:
+                  type: string
+      responses:
+        '204':
+          description: Данные успешно обновлены
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '500':
+          description: Внутренняя ошибка сервера
