@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package mes_grpc;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "proto/";
+
+service TaskService {
+    rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+    rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+    rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
+    rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+    rpc GetTasks(google.protobuf.Empty) returns (stream GetTasksResponse);
+}
+  
+message CreateTaskRequest {
+    string author = 1;
+    string title = 2;
+    string content = 3;
+}
+
+message CreateTaskResponse {
+    string id = 1;
+}
+
+message UpdateTaskRequest {
+    string id = 1;
+    string author = 2;
+    string title = 3;
+    string content = 4;
+}
+
+message UpdateTaskResponse {
+    string error = 1;
+}
+
+message DeleteTaskRequest {
+    string id = 1;
+}
+
+message Task {
+    string id = 1;
+    string author = 2;
+    string title = 3;
+    string content = 4;
+    string creation_time = 5;
+}
+
+message GetTaskRequest {
+    string id = 1;
+}
+
+message GetTaskResponse {
+    Task task = 1;
+}
+
+message GetTasksResponse {
+    Task task = 1;
+}
+  
