@@ -1,0 +1,105 @@
+openapi: 3.0.3
+
+info:
+  version: "1.0"
+  title: Сервис пользователей
+
+servers:
+  - url: http://localhost:8080/
+
+paths:
+  /register:
+    post:
+      summary: Регистрация нового пользователя
+      description: Создаёт нового пользователя на основе предоставленного логина и пароля.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+              required:
+                - login
+                - password
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+        '400':
+          description: Невалидные данные / пользователь существует
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /login:
+    post:
+      summary: Вход пользователя
+      description: Аутентифицирует пользователя на основе логина и пароля, и отправляет токен для аутентификации
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+              required:
+                - login
+                - password
+      responses:
+        '200':
+          description: Вход успешен
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Сессионный cookie
+        '400':
+          description: Невалидные данные
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /update-info:
+    put:
+      summary: Обновление данных пользователя
+      description: Обновляет данные о пользователе
+      parameters:
+        - name: "jwt"
+          in: "header"
+          schema:
+            type: "string"
+          description: "JWT передается через cookie в заголовке."
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                surname:
+                  type: string
+                birth_day:
+                  type: string
+                  format: date
+                mail:
+                  type: string
+                phone_number:
+                  type: string
+      responses:
+        '204':
+          description: Данные успешно обновлены
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '500':
+          description: Внутренняя ошибка сервера
