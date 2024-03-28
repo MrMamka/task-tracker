@@ -1,14 +1,12 @@
-# Думаю, предполагалось, что я использую фреймворк, который сможет сгенерировать этот файл,
-# но я не использовал таких фреймворков, поэтому опишу руками
-# Также, чтобы точно всё было понятно оставил curl'ы для каждой ручки в spec.txt
+openapi: 3.0.3
 
 info:
   version: "1.0"
   title: Сервис пользователей
-host: localhost:8080
-basePath: "/"
-schemes:
-- "http"
+
+servers:
+  - url: http://localhost:8080/
+
 paths:
   /register:
     post:
@@ -25,9 +23,9 @@ paths:
                   type: string
                 password:
                   type: string
-            required:
-              - login
-              - password
+              required:
+                - login
+                - password
       responses:
         '201':
           description: Пользователь успешно зарегистрирован
@@ -35,10 +33,11 @@ paths:
           description: Невалидные данные / пользователь существует
         '500':
           description: Внутренняя ошибка сервера
+
   /login:
     post:
       summary: Вход пользователя
-      description: Аутентифицирует пользователя на основе адреса логина и пароля, и отправляет токен для аутентификации
+      description: Аутентифицирует пользователя на основе логина и пароля, и отправляет токен для аутентификации
       requestBody:
         required: true
         content:
@@ -50,9 +49,9 @@ paths:
                   type: string
                 password:
                   type: string
-            required:
-              - login
-              - password
+              required:
+                - login
+                - password
       responses:
         '200':
           description: Вход успешен
@@ -65,15 +64,18 @@ paths:
           description: Невалидные данные
         '500':
           description: Внутренняя ошибка сервера
+
   /update-info:
     put:
-      summary: Обновление данных
+      summary: Обновление данных пользователя
       description: Обновляет данные о пользователе
       parameters:
-      - name: "jwt"
-        in: "header"
-        description: "JWT передается через cookie в заголовке."
-        required: true
+        - name: "jwt"
+          in: "header"
+          schema:
+            type: "string"
+          description: "JWT передается через cookie в заголовке."
+          required: true
       requestBody:
         required: true
         content:
@@ -87,7 +89,7 @@ paths:
                   type: string
                 birth_day:
                   type: string
-                  format: dd/mm/YYYY
+                  format: date
                 mail:
                   type: string
                 phone_number:

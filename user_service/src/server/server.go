@@ -149,11 +149,6 @@ func (s *Server) getInfo(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Can not get user data: %v", err)
 		return
 	}
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Can not get user data: %v", err)
-		return
-	}
 
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "    ")

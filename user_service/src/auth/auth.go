@@ -5,8 +5,8 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
-	"unicode"
 	"userservice/src/database"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -54,7 +54,7 @@ func (a *AuthService) ValidateLogin(login string) error {
 		return err
 	}
 	if ok {
-		return fmt.Errorf("User with this login already exist")
+		return fmt.Errorf("user with this login already exist")
 	}
 
 	return nil
@@ -71,7 +71,7 @@ func (a *AuthService) ValidatePassword(password string) error {
 
 func (a *AuthService) ValidateUserData(userData *database.UserData) error {
 	if userData == nil {
-		return fmt.Errorf("User data not found")
+		return fmt.Errorf("user data not found")
 	}
 
 	err := validation.Errors{
@@ -96,29 +96,14 @@ func dateFormat(value interface{}) error {
 
 func requiredLetters(value interface{}) error {
 	s, _ := value.(string)
-	var hasLetter, hasDigit, hasUpperCase, hasLowerCase bool
-	for _, c := range s {
-		if unicode.IsLetter(c) {
-			hasLetter = true
-			if unicode.IsUpper(c) {
-				hasUpperCase = true
-			} else {
-				hasLowerCase = true
-			}
-		} else if unicode.IsDigit(c) {
-			hasDigit = true
-		}
-	}
-	if !hasLetter {
-		return fmt.Errorf("password must include at least one letter")
-	}
-	if !hasDigit {
+
+	if !regexp.MustCompile(`\d`).MatchString(s) {
 		return fmt.Errorf("password must include at least one digit")
 	}
-	if !hasUpperCase {
+	if !regexp.MustCompile(`[A-Z]`).MatchString(s) {
 		return fmt.Errorf("password must include at least one uppercase letter")
 	}
-	if !hasLowerCase {
+	if !regexp.MustCompile(`[a-z]`).MatchString(s) {
 		return fmt.Errorf("password must include at least one lowercase letter")
 	}
 	return nil
