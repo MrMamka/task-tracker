@@ -14,3 +14,17 @@ curl -v -X PUT 'localhost:8080/update-info' \
 Тестовая ручка для получения данных:
 curl -v GET 'localhost:8080/info' \
 -H "Cookie: jwt="
+
+Добавление задачи:
+curl -v -X POST 'localhost:8080/create-task' \
+--data '{"title": "Kek Task", "content": "some kek content"}' \
+-H "Cookie: jwt="
+
+Получение задачи:
+curl -v 'localhost:8080/task?4' \
+-H "Cookie: jwt="
+
+Обновление задачи:
+curl -v -X PUT 'localhost:8080/update-task-info' \
+--data '{"ID": 5, "title": "New Kek Title", "content": "new kek content"}' \
+-H "Cookie: jwt="

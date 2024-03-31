@@ -1,157 +1,82 @@
 package server
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"tasksmanager/src/auth"
+	"net"
+	pb "tasksmanager/proto"
 	"tasksmanager/src/database"
 
-	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Server struct {
-	mux  *chi.Mux
-	db   *database.DataBase
-	auth *auth.AuthService
+	pb.UnimplementedTaskServiceServer
+	db *database.DataBase
+}
+
+func (s *Server) CreateTask(ctx context.Context, req *pb.CreateTaskRequest) (*pb.CreateTaskResponse, error) {
+	data := &database.TaskData{
+		Author:  req.Author,
+		Title:   req.Title,
+		Content: req.Content,
+	}
+	id, err := s.db.CreateTask(data)
+	return &pb.CreateTaskResponse{Id: id}, err
+}
+
+func (s *Server) GetTask(ctx context.Context, req *pb.GetTaskRequest) (*pb.Task, error) {
+	data, err := s.db.GetTaskData(uint(req.Id))
+	return &pb.Task{
+		Id:           req.Id,
+		Author:       data.Author,
+		Title:        data.Title,
+		Content:      data.Content,
+		CreationTime: timestamppb.New(data.CreationTime),
+	}, err
+}
+
+func (s *Server) UpdateTask(ctx context.Context, req *pb.UpdateTaskRequest) (*emptypb.Empty, error) {
+	err := s.db.UpdateTaskData(&database.TaskData{
+		ID:      uint(req.Id),
+		Content: req.Content,
+		Title:   req.Title,
+	})
+	return nil, err
+}
+
+func (s *Server) DeleteTask(ctx context.Context, req *pb.DeleteTaskRequest) (*emptypb.Empty, error) {
+	return nil, s.db.DeleteTask(uint(req.Id))
+}
+
+func (s *Server) GetTasks(*emptypb.Empty, pb.TaskService_GetTasksServer) error {
+	return nil
 }
 
 func New(db *database.DataBase) *Server {
 	return &Server{
-		mux:  chi.NewRouter(),
-		db:   db,
-		auth: auth.New(db),
+		db: db,
 	}
 }
 
-func (s *Server) Register() {
-	s.mux.Post("/register", s.register)
-	s.mux.Post("/login", s.login)
-	s.mux.Put("/update-info", s.updateInfo)
-	s.mux.Get("/info", s.getInfo)
-}
-
-func (s *Server) Listen(addr string) {
-	fmt.Println("Server started.")
-	err := http.ListenAndServe(addr, s.mux)
-	log.Fatalf("Server stopped: %v", err)
-}
-
-type LoginPassword struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
-}
-
-func (s *Server) register(w http.ResponseWriter, r *http.Request) {
-	var user LoginPassword
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Can not parse body: %v", err)
-		return
-	}
-	defer r.Body.Close()
-
-	login := user.Login
-	password := user.Password
-
-	if err := s.auth.ValidateLogin(login); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Bad login: %v", err)
-		return
-	}
-
-	if err := s.auth.ValidatePassword(password); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Bad password: %v", err)
-		return
-	}
-
-	if err := s.auth.CreateUser(login, password); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Can not create user: %v", err)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	var user LoginPassword
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Can not parse body: %v", err)
-		return
-	}
-	defer r.Body.Close()
-
-	login := user.Login
-	password := user.Password
-
-	if err := s.auth.CheckPassword(login, password); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Wrong login or password: %v", err)
-		return
-	}
-
-	token, err := s.auth.CreateToken(login)
+func (s *Server) RegisterAndListen(addr string) {
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Can not generate token: %v", err)
-		return
+		log.Fatalf("failed to listen: %v", err)
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:  "jwt",
-		Value: token,
-	})
-	w.WriteHeader(http.StatusOK)
-}
+	grpcServer := grpc.NewServer()
+	reflection.Register(grpcServer)
 
-func (s *Server) updateInfo(w http.ResponseWriter, r *http.Request) {
-	login, ok := s.auth.CheckAuth(w, r)
-	if !ok {
-		return
-	}
+	pb.RegisterTaskServiceServer(grpcServer, s)
 
-	var userData database.UserData
-	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Can not parse body: %v", err)
-		return
-	}
-	defer r.Body.Close()
-
-	if err := s.auth.ValidateUserData(&userData); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Bad user data: %v", err)
-		return
-	}
-
-	err := s.db.UpdateUserData(login, &userData)
+	fmt.Println("Tasks manager server started.")
+	err = grpcServer.Serve(lis)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Can not update user data: %v", err)
-		return
+		log.Fatalf("Server stopped: %v", err)
 	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s *Server) getInfo(w http.ResponseWriter, r *http.Request) {
-	login, ok := s.auth.CheckAuth(w, r)
-	if !ok {
-		return
-	}
-
-	data, err := s.db.GetUserData(login)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Can not get user data: %v", err)
-		return
-	}
-
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "    ")
-	encoder.Encode(login)
-	encoder.Encode(data)
 }

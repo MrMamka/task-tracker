@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   user_service:
     build: 
@@ -8,20 +6,45 @@ services:
     ports:
       - 8080:8080
     depends_on:
-      - db
+      - user_db
+      - tasks_manager
     restart: always
 
-  db:
+  user_db:
     image: postgres:latest
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: user_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - user_db_data:/var/lib/postgresql/data
     restart: always
     ports:
-      - "5432:5432"
+      - 5432:5432
+
+
+  tasks_manager:
+    build: 
+      context: tasks_manager
+    command: ["--port", "8081"]
+    ports:
+      - 8081:8081
+    depends_on:
+      - task_db
+    restart: always
+
+  task_db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: task_db
+    volumes:
+      - task_db_data:/var/lib/postgresql/data
+    restart: always
+    ports:
+      - 5433:5432
 
 volumes:
-  postgres_data:
+  user_db_data:
+  task_db_data:

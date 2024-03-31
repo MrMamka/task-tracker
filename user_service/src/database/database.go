@@ -8,8 +8,7 @@ import (
 )
 
 type DataBase struct {
-	db *gorm.DB
-	//db *sql.DB
+	*gorm.DB
 }
 
 type userInfo struct {
@@ -32,7 +31,7 @@ type UserData struct {
 }
 
 func New() *DataBase {
-	dsn := "host=db dbname=user_db sslmode=disable user=user password=password"
+	dsn := "host=user_db dbname=user_db sslmode=disable user=user password=password"
 
 	// db, err := sql.Open("postgres", dsn)
 
@@ -44,12 +43,12 @@ func New() *DataBase {
 
 	db.AutoMigrate(&userInfo{})
 
-	return &DataBase{db: db}
+	return &DataBase{db}
 }
 
 func (db *DataBase) UserExist(login string) (bool, error) {
 	var info userInfo
-	result := db.db.First(&info, "login = ?", login)
+	result := db.First(&info, "login = ?", login)
 	if result.Error == gorm.ErrRecordNotFound {
 		return false, nil
 	} else if result.Error != nil {
@@ -61,18 +60,18 @@ func (db *DataBase) UserExist(login string) (bool, error) {
 
 func (db *DataBase) CreateUser(login string, passwordHash []byte) error {
 	info := &userInfo{Login: login, PasswordHash: passwordHash}
-	result := db.db.Create(info)
+	result := db.Create(info)
 	return result.Error
 }
 
 func (db *DataBase) GetPasswordHash(login string) ([]byte, error) {
 	info := &userInfo{}
-	result := db.db.First(&info, "login = ?", login)
+	result := db.First(&info, "login = ?", login)
 	return info.PasswordHash, result.Error
 }
 
 func (db *DataBase) UpdateUserData(login string, data *UserData) error {
-	result := db.db.Model(&userInfo{}).Where("login = ?", login).Updates(userInfo{
+	result := db.Model(&userInfo{}).Where("login = ?", login).Updates(userInfo{
 		Name:        data.Name,
 		Surname:     data.Surname,
 		BirthDay:    data.BirthDay,
@@ -84,7 +83,7 @@ func (db *DataBase) UpdateUserData(login string, data *UserData) error {
 
 func (db *DataBase) GetUserData(login string) (*UserData, error) {
 	info := &userInfo{Login: login}
-	result := db.db.First(&info, "login = ?", login)
+	result := db.First(&info, "login = ?", login)
 	return &UserData{
 		Name:        info.Name,
 		Surname:     info.Surname,
