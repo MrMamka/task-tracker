@@ -1,25 +1,17 @@
 package database
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+var ErrPermissionDenied = errors.New("permission denied")
+
 type DataBase struct {
 	*gorm.DB
-}
-
-type userInfo struct {
-	gorm.Model
-	Login        string
-	PasswordHash []byte
-	Name         string
-	Surname      string
-	BirthDay     string
-	Mail         string
-	PhoneNumber  string
 }
 
 type taskInfo struct {
@@ -45,6 +37,16 @@ type TaskData struct {
 	CreationTime time.Time
 }
 
+func (ti taskInfo) toTaskData() TaskData {
+	return TaskData{
+		ID:           ti.ID,
+		Author:       ti.Author,
+		Title:        ti.Title,
+		Content:      ti.Content,
+		CreationTime: ti.Model.CreatedAt,
+	}
+}
+
 func New() *DataBase {
 	dsn := "host=task_db dbname=task_db sslmode=disable user=user password=password"
 
@@ -59,73 +61,55 @@ func New() *DataBase {
 	return &DataBase{db}
 }
 
-// func (db *DataBase) UserExist(login string) (bool, error) {
-// 	var info userInfo
-// 	result := db.First(&info, "login = ?", login)
-// 	if result.Error == gorm.ErrRecordNotFound {
-// 		return false, nil
-// 	} else if result.Error != nil {
-// 		return false, result.Error
-// 	}
-
-// 	return true, nil
-// }
-
 func (db *DataBase) CreateTask(data *TaskData) (uint32, error) {
 	info := &taskInfo{Author: data.Author, Title: data.Title, Content: data.Content}
 	result := db.Create(info)
 	return uint32(info.ID), result.Error
 }
 
-func (db *DataBase) GetTaskData(id uint) (*TaskData, error) {
+func (db *DataBase) GetTaskData(id uint, author string) (*TaskData, error) {
 	info := &taskInfo{Model: gorm.Model{ID: id}}
 	result := db.First(&info, "ID = ?", id)
-	return &TaskData{
-		Author:       info.Author,
-		Title:        info.Title,
-		Content:      info.Content,
-		CreationTime: info.Model.CreatedAt,
-	}, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if info.Author != author {
+		return nil, ErrPermissionDenied
+	}
+	data := info.toTaskData()
+	return &data, nil
 }
 
 func (db *DataBase) UpdateTaskData(data *TaskData) error {
+	if _, err := db.GetTaskData(data.ID, data.Author); err != nil {
+		return err
+	}
 	result := db.Model(&taskInfo{}).Where("ID = ?", data.ID).Updates(taskInfo{
 		Title:   data.Title,
 		Content: data.Content,
 	})
-	return result.Error
+	if result.Error != nil {
+		return result.Error
+	}
+	return db.Model(&taskInfo{}).Where("ID = ?", data.ID).Updates(taskInfo{
+		Title:   data.Title,
+		Content: data.Content,
+	}).Error
 }
 
-func (db *DataBase) DeleteTask(id uint) error {
-	result := db.Delete(&taskInfo{}, id)
-	return result.Error
+func (db *DataBase) DeleteTask(id uint, author string) error {
+	if _, err := db.GetTaskData(id, author); err != nil {
+		return err
+	}
+	return db.Delete(&taskInfo{}, id).Error
 }
 
-// func (db *DataBase) GetPasswordHash(login string) ([]byte, error) {
-// 	info := &userInfo{}
-// 	result := db.First(&info, "login = ?", login)
-// 	return info.PasswordHash, result.Error
-// }
-
-// func (db *DataBase) UpdateUserData(login string, data *UserData) error {
-// 	result := db.Model(&userInfo{}).Where("login = ?", login).Updates(userInfo{
-// 		Name:        data.Name,
-// 		Surname:     data.Surname,
-// 		BirthDay:    data.BirthDay,
-// 		Mail:        data.Mail,
-// 		PhoneNumber: data.PhoneNumber,
-// 	})
-// 	return result.Error
-// }
-
-// func (db *DataBase) GetUserData(login string) (*UserData, error) {
-// 	info := &userInfo{Login: login}
-// 	result := db.First(&info, "login = ?", login)
-// 	return &UserData{
-// 		Name:        info.Name,
-// 		Surname:     info.Surname,
-// 		BirthDay:    info.BirthDay,
-// 		Mail:        info.Mail,
-// 		PhoneNumber: info.PhoneNumber,
-// 	}, result.Error
-// }
+func (db *DataBase) GetTasks(offset, batchSize int, author string) ([]TaskData, error) {
+	var tasks []taskInfo
+	result := db.Where("author = ?", author).Limit(batchSize).Offset(offset).Find(&tasks)
+	data := make([]TaskData, 0, len(tasks))
+	for _, info := range tasks {
+		data = append(data, info.toTaskData())
+	}
+	return data, result.Error
+}

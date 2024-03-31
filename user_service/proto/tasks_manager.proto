@@ -12,7 +12,7 @@ service TaskService {
     rpc UpdateTask(UpdateTaskRequest) returns (google.protobuf.Empty);
     rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty);
     rpc GetTask(GetTaskRequest) returns (Task);
-    rpc GetTasks(google.protobuf.Empty) returns (stream Task);
+    rpc GetTasks(GetTasksRequest) returns (GetTasksReponse);
 }
   
 message CreateTaskRequest {
@@ -34,6 +34,7 @@ message UpdateTaskRequest {
 
 message DeleteTaskRequest {
     uint32 id = 1;
+    string author = 3;
 }
 
 message Task {
@@ -46,4 +47,16 @@ message Task {
 
 message GetTaskRequest {
     uint32 id = 1;
+    string author = 3;
+}
+
+message GetTasksRequest {
+    uint32 batch_size = 1;
+    uint32 offset = 2;
+    string author = 3;
+}
+
+message GetTasksReponse {
+    repeated Task tasks = 1;
+    uint32 offset = 2;
 }

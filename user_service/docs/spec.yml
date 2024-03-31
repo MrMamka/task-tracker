@@ -8,6 +8,7 @@ servers:
   - url: http://localhost:8080/
 
 paths:
+# USER
   /register:
     post:
       summary: Регистрация нового пользователя
@@ -69,13 +70,6 @@ paths:
     put:
       summary: Обновление данных пользователя
       description: Обновляет данные о пользователе
-      parameters:
-        - name: "jwt"
-          in: "header"
-          schema:
-            type: "string"
-          description: "JWT передается через cookie в заголовке."
-          required: true
       requestBody:
         required: true
         content:
@@ -103,3 +97,200 @@ paths:
           description: Не переданы cookie
         '500':
           description: Внутренняя ошибка сервера
+      security:
+        - cookieAuth: []
+
+#TASK
+  /create-task:
+    post:
+      summary: Добавление задачи
+      description: Создаёт новую задачу с заданными полями
+      parameters:
+        - name: "jwt"
+          in: "header"
+          schema:
+            type: "string"
+          description: "JWT передается через cookie в заголовке."
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Задача успешно создана
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - cookieAuth: []
+
+  /task:
+    get:
+      summary: Получение задачи
+      description: Даёт информацию о задаче по ID. Получить можно только свои задачи
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Данные о задаче успешно получены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  author:
+                    type: string
+                  title:
+                    type: string
+                  content:
+                    type: string
+                  creation_time:
+                    type: string
+                    format: date-time
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '403':
+          description: Недостаточно прав, чтобы получить данную задачу
+        '500':
+          description: Внутренняя ошибка сервера / Передан несуществующий ID
+      security:
+        - cookieAuth: []
+
+    delete:
+      summary: Удаление задачи
+      description: Удаляет задачу по ID. Удалить можно только свои задачи
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '204':
+          description: Задача успешно удалена
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '403':
+          description: Недостаточно прав, чтобы удалить задачу
+        '500':
+          description: Внутренняя ошибка сервера / Передан несуществующий ID
+      security:
+        - cookieAuth: []
+
+  /update-task-info:
+    put:
+      summary: Обновление задачи
+      description: Меняет название и/или содержание задачи по ID. Менять можно только свои задачи
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ID:
+                  type: integer
+                title:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '204':
+          description: Задача успешно обновлена
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '403':
+          description: Недостаточно прав, чтобы изменить задачу
+        '500':
+          description: Внутренняя ошибка сервера / Передан несуществующий ID
+      security:
+        - cookieAuth: []
+
+  /tasks:
+    get:
+      summary: Получение задач с пагинацией
+      description: Получение задач пользователя по offset'у и размером batch'а. Кроме задач возвращает offset для получения следующего batch'а задач
+      parameters:
+        - in: query
+          name: batch_size
+          schema:
+            type: integer
+          required: true
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          required: true
+
+      responses:
+        '200':
+          description: Задачи успешно получены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        author:
+                          type: string
+                        title:
+                          type: string
+                        content:
+                          type: string
+                        creation_time:
+                          type: string
+                          format: date-time
+                  offset:
+                    type: integer
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - cookieAuth: []
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+      description: Авторизация через JWT

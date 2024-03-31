@@ -21,10 +21,18 @@ curl -v -X POST 'localhost:8080/create-task' \
 -H "Cookie: jwt="
 
 Получение задачи:
-curl -v 'localhost:8080/task?4' \
+curl -v 'localhost:8080/task?id=4' \
 -H "Cookie: jwt="
 
 Обновление задачи:
 curl -v -X PUT 'localhost:8080/update-task-info' \
 --data '{"ID": 5, "title": "New Kek Title", "content": "new kek content"}' \
+-H "Cookie: jwt="
+
+Удаление задачи:
+curl -v -X DELETE 'localhost:8080/task?id=4' \
+-H "Cookie: jwt="
+
+Получение задач с пагинацией:
+curl -v 'localhost:8080/tasks?batch_size=3&offset=0' \
 -H "Cookie: jwt="

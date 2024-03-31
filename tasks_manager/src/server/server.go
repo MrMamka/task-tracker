@@ -19,6 +19,16 @@ type Server struct {
 	db *database.DataBase
 }
 
+func DataToProto(data *database.TaskData) *pb.Task {
+	return &pb.Task{
+		Id:           uint32(data.ID),
+		Author:       data.Author,
+		Title:        data.Title,
+		Content:      data.Content,
+		CreationTime: timestamppb.New(data.CreationTime),
+	}
+}
+
 func (s *Server) CreateTask(ctx context.Context, req *pb.CreateTaskRequest) (*pb.CreateTaskResponse, error) {
 	data := &database.TaskData{
 		Author:  req.Author,
@@ -30,18 +40,16 @@ func (s *Server) CreateTask(ctx context.Context, req *pb.CreateTaskRequest) (*pb
 }
 
 func (s *Server) GetTask(ctx context.Context, req *pb.GetTaskRequest) (*pb.Task, error) {
-	data, err := s.db.GetTaskData(uint(req.Id))
-	return &pb.Task{
-		Id:           req.Id,
-		Author:       data.Author,
-		Title:        data.Title,
-		Content:      data.Content,
-		CreationTime: timestamppb.New(data.CreationTime),
-	}, err
+	data, err := s.db.GetTaskData(uint(req.Id), req.Author)
+	if err != nil {
+		return nil, err
+	}
+	return DataToProto(data), nil
 }
 
 func (s *Server) UpdateTask(ctx context.Context, req *pb.UpdateTaskRequest) (*emptypb.Empty, error) {
 	err := s.db.UpdateTaskData(&database.TaskData{
+		Author:  req.Author,
 		ID:      uint(req.Id),
 		Content: req.Content,
 		Title:   req.Title,
@@ -50,11 +58,22 @@ func (s *Server) UpdateTask(ctx context.Context, req *pb.UpdateTaskRequest) (*em
 }
 
 func (s *Server) DeleteTask(ctx context.Context, req *pb.DeleteTaskRequest) (*emptypb.Empty, error) {
-	return nil, s.db.DeleteTask(uint(req.Id))
+	return nil, s.db.DeleteTask(uint(req.Id), req.Author)
 }
 
-func (s *Server) GetTasks(*emptypb.Empty, pb.TaskService_GetTasksServer) error {
-	return nil
+func (s *Server) GetTasks(ctx context.Context, req *pb.GetTasksRequest) (*pb.GetTasksReponse, error) {
+	data, err := s.db.GetTasks(int(req.Offset), int(req.BatchSize), req.Author)
+	if err != nil {
+		return nil, err
+	}
+	tasks := make([]*pb.Task, 0, len(data))
+	for _, task := range data {
+		tasks = append(tasks, DataToProto(&task))
+	}
+	return &pb.GetTasksReponse{
+		Tasks:  tasks,
+		Offset: req.Offset + uint32(len(data)),
+	}, nil
 }
 
 func New(db *database.DataBase) *Server {
