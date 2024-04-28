@@ -12,9 +12,10 @@ func main() {
 	flag.Parse()
 
 	db := database.New()
-	server := server.New(db)
+	server, close := server.New(db)
+	defer close()
 	server.Register()
-	
+
 	addr := fmt.Sprintf("0.0.0.0:%d", *port)
 	server.Listen(addr)
 }

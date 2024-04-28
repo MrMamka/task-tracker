@@ -12,6 +12,7 @@ import (
 	"time"
 	pb "userservice/proto"
 	"userservice/src/auth"
+	"userservice/src/broker"
 	"userservice/src/database"
 
 	"github.com/go-chi/chi/v5"
@@ -24,14 +25,17 @@ type Server struct {
 	db      *database.DataBase
 	auth    *auth.AuthService
 	taskMan pb.TaskServiceClient
+	broker  *broker.Broker
 }
 
-func New(db *database.DataBase) *Server {
+func New(db *database.DataBase) (*Server, func()) {
+	broker, close := broker.New()
 	return &Server{
-		mux:  chi.NewRouter(),
-		db:   db,
-		auth: auth.New(db),
-	}
+		mux:    chi.NewRouter(),
+		db:     db,
+		auth:   auth.New(db),
+		broker: broker,
+	}, close
 }
 
 func (s *Server) Register() {
@@ -45,6 +49,9 @@ func (s *Server) Register() {
 	s.mux.Put("/update-task-info", s.updateTaskInfo)
 	s.mux.Delete("/task", s.deleteTask)
 	s.mux.Get("/tasks", s.getTasks)
+
+	s.mux.Post("/like", s.addLike)
+	s.mux.Post("/view", s.addView)
 }
 
 func (s *Server) Listen(addr string) {
@@ -387,4 +394,42 @@ func (s *Server) getTasks(w http.ResponseWriter, r *http.Request) {
 	encoder.SetIndent("", "    ")
 	encoder.Encode(tasksOffset)
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) addLike(w http.ResponseWriter, r *http.Request) {
+	login, ok := s.auth.CheckAuth(w, r)
+	if !ok {
+		return
+	}
+
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Can not parse query: %v", err)
+		return
+	}
+
+	s.broker.SendLike(broker.Statistic{
+		Login: login,
+		TaskID: uint(id),
+	})
+}
+
+func (s *Server) addView(w http.ResponseWriter, r *http.Request) {
+	login, ok := s.auth.CheckAuth(w, r)
+	if !ok {
+		return
+	}
+
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Can not parse query: %v", err)
+		return
+	}
+
+	s.broker.SendView(broker.Statistic{
+		Login: login,
+		TaskID: uint(id),
+	})
 }
