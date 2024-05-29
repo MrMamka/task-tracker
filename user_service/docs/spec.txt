@@ -36,3 +36,11 @@ curl -v -X DELETE 'localhost:8080/task?id=4' \
 Получение задач с пагинацией:
 curl -v 'localhost:8080/tasks?batch_size=3&offset=0' \
 -H "Cookie: jwt="
+
+Добавление лайка:
+curl -v -X POST 'localhost:8080/like?id=1' \
+-H "Cookie: jwt=
+
+Добавление просмотра:
+curl -v -X POST 'localhost:8080/view?id=1' \
+-H "Cookie: jwt=

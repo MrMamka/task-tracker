@@ -51,7 +51,6 @@ func New() *DataBase {
 	dsn := "host=task_db dbname=task_db sslmode=disable user=user password=password"
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-
 	if err != nil {
 		panic("failed to connect tasks database: " + err.Error())
 	}
@@ -73,9 +72,9 @@ func (db *DataBase) GetTaskData(id uint, author string) (*TaskData, error) {
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	if info.Author != author {
-		return nil, ErrPermissionDenied
-	}
+	// if info.Author != author {
+	// 	return nil, ErrPermissionDenied
+	// }
 	data := info.toTaskData()
 	return &data, nil
 }
@@ -106,7 +105,8 @@ func (db *DataBase) DeleteTask(id uint, author string) error {
 
 func (db *DataBase) GetTasks(offset, batchSize int, author string) ([]TaskData, error) {
 	var tasks []taskInfo
-	result := db.Where("author = ?", author).Limit(batchSize).Offset(offset).Find(&tasks)
+	// result := db.Where("author = ?", author).Limit(batchSize).Offset(offset).Find(&tasks)
+	result := db.Limit(batchSize).Offset(offset).Find(&tasks)
 	data := make([]TaskData, 0, len(tasks))
 	for _, info := range tasks {
 		data = append(data, info.toTaskData())

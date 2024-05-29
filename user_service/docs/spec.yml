@@ -145,7 +145,7 @@ paths:
   /task:
     get:
       summary: Получение задачи
-      description: Даёт информацию о задаче по ID. Получить можно только свои задачи
+      description: Даёт информацию о задаче по ID
       parameters:
         - in: query
           name: id
@@ -239,7 +239,7 @@ paths:
   /tasks:
     get:
       summary: Получение задач с пагинацией
-      description: Получение задач пользователя по offset'у и размером batch'а. Кроме задач возвращает offset для получения следующего batch'а задач
+      description: Получение задач по offset'у и размером batch'а. Кроме задач возвращает offset для получения следующего batch'а задач
       parameters:
         - in: query
           name: batch_size
@@ -286,6 +286,51 @@ paths:
           description: Внутренняя ошибка сервера
       security:
         - cookieAuth: []
+
+  /like:
+    post:
+      summary: Добавление лайка на задачу
+      description: Добавляет лайк на задачу по ID
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Лайк потавлен успешно
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - cookieAuth: []
+
+  /view:
+    post:
+      summary: Добавление просмотра на задачу
+      description: Добавляет просмотр на задачу по ID
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Просмотр добавлен успешно
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не переданы cookie
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - cookieAuth: []
+
 
 components:
   securitySchemes:
