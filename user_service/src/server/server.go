@@ -52,6 +52,10 @@ func (s *Server) Register() {
 
 	s.mux.Post("/like", s.addLike)
 	s.mux.Post("/view", s.addView)
+
+	s.mux.Get("/task-stats", s.taskStats)
+	s.mux.Get("/top-tasks", s.topTasks)
+	s.mux.Get("/top-users", s.topUsers)
 }
 
 func (s *Server) Listen(addr string) {
@@ -410,7 +414,7 @@ func (s *Server) addLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.broker.SendLike(broker.Statistic{
-		Login: login,
+		Login:  login,
 		TaskID: uint(id),
 	})
 }
@@ -429,7 +433,26 @@ func (s *Server) addView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.broker.SendView(broker.Statistic{
-		Login: login,
+		Login:  login,
 		TaskID: uint(id),
 	})
+}
+
+func (s *Server) taskStats(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Can not parse query: %v", err)
+		return
+	}
+
+	print(id)
+}
+
+func (s *Server) topTasks(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (s *Server) topUsers(w http.ResponseWriter, r *http.Request) {
+
 }
