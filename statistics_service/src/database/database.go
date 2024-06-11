@@ -1,6 +1,8 @@
 package database
 
 import (
+	"fmt"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -11,14 +13,14 @@ type DataBase struct {
 
 type likeStat struct {
 	gorm.Model
-	login string
-	id    uint
+	UserLogin string
+	TaskID    uint
 }
 
 type viewStat struct {
 	gorm.Model
-	login string
-	id    uint
+	UserLogin string
+	TaskID    uint
 }
 
 type Statistic struct {
@@ -41,13 +43,19 @@ func New() *DataBase {
 }
 
 func (db *DataBase) AddLike(stat Statistic) error {
-	info := &likeStat{login: stat.Login, id: stat.TaskID}
+	info := &likeStat{UserLogin: stat.Login, TaskID: stat.TaskID}
+
 	result := db.Create(info)
+
+	var statInfo likeStat
+	db.First(&stat)
+	fmt.Printf("Like added: %#v\n", statInfo)
+
 	return result.Error
 }
 
 func (db *DataBase) AddView(stat Statistic) error {
-	info := &viewStat{login: stat.Login, id: stat.TaskID}
+	info := &viewStat{UserLogin: stat.Login, TaskID: stat.TaskID}
 	result := db.Create(info)
 	return result.Error
 }
