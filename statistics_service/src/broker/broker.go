@@ -1,8 +1,10 @@
 package broker
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"statistics/src/database"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -24,7 +26,7 @@ func New() (*Broker, func()) {
 		master, err = sarama.NewConsumer(brokers, config)
 		if err != nil {
 			fmt.Println("Wait for Kafka")
-			time.Sleep(5 * time.Second)
+			time.Sleep(5 * time.Second) // TODO: decrease?
 			continue
 		}
 		fmt.Println("Kafka is ready")
@@ -43,6 +45,27 @@ func New() (*Broker, func()) {
 	return &Broker{
 		Consumer: consumer,
 	}, close
+}
+
+func (b *Broker) Consume(db *database.DataBase) {
+	for msg := range b.Consumer.Messages() {
+		var stat Statistic
+		json.Unmarshal(msg.Value, &stat)
+		key := string(msg.Key)
+		fmt.Printf("Got: %s %#v\n", string(msg.Key), stat)
+
+		if key == "Like" {
+			db.EnsureLike(database.Statistic{
+				Login:  stat.Login,
+				TaskID: stat.TaskID,
+			})
+		} else if key == "View" {
+			db.EnsureView(database.Statistic{
+				Login:  stat.Login,
+				TaskID: stat.TaskID,
+			})
+		}
+	}
 }
 
 type Statistic struct {

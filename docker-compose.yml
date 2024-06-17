@@ -11,7 +11,7 @@ services:
     depends_on:
       - user_db
       - tasks_manager
-      - kafka
+      - statistics_service
     restart: always
 
   user_db:
@@ -92,19 +92,19 @@ services:
     ports:
       - "9092:9092"
 
-  kafka-ui:
-    container_name: "kafka-ui"
-    image: provectuslabs/kafka-ui
-    restart: unless-stopped
-    depends_on:
-      - kafka
-    environment:
-      KAFKA_CLUSTERS_0_NAME: 'local'
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:29092'
-      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
-      DYNAMIC_CONFIG_ENABLED: 'true'
-    ports:
-      - "8000:8080"
+  # kafka-ui:
+  #   container_name: "kafka-ui"
+  #   image: provectuslabs/kafka-ui
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - kafka
+  #   environment:
+  #     KAFKA_CLUSTERS_0_NAME: 'local'
+  #     KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:29092'
+  #     KAFKA_CLUSTERS_0_METRICS_PORT: 9997
+  #     DYNAMIC_CONFIG_ENABLED: 'true'
+  #   ports:
+  #     - "8000:8080"
 
 volumes:
   user_db_data:

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package stat_grpc;
+
+option go_package = "statistic/";
+
+service StatisticsService {
+    rpc GetTaskStats(GetTaskStatsRequest) returns (GetTaskStatsResponse);
+    rpc GetTopTasks(GetTopTasksRequest) returns (GetTopTasksResponse);
+    rpc GetTopUsers(GetTopUsersRequest) returns (GetTopUsersResponse);
+}
+  
+message GetTaskStatsRequest {
+    uint32 id = 1;
+}
+
+message GetTaskStatsResponse {
+    int32 likes = 1;
+    int32 views = 2;
+}
+
+enum SortBy {
+    likes = 0;
+    views = 1;
+}
+
+message GetTopTasksRequest {
+    SortBy sort = 1;
+    map<uint32, string> authors = 2; // TODO: add cash to statistic service to store this
+}
+
+message Task {
+    uint32 id = 1;
+    string author = 2;
+    int32 likes_or_views = 3;
+}
+
+message GetTopTasksResponse {
+    repeated Task tasks = 1;
+}
+
+message GetTopUsersRequest {
+    map<uint32, string> authors = 1;
+}
+
+message Author {
+    string login = 1;
+    int32 likes = 2;
+}
+
+message GetTopUsersResponse {
+    repeated Author authors = 1;
+}

@@ -66,21 +66,30 @@ func (db *DataBase) CreateTask(data *TaskData) (uint32, error) {
 	return uint32(info.ID), result.Error
 }
 
+func (db *DataBase) CheckTaskPermission(id uint, author string) error {
+	info := &taskInfo{Model: gorm.Model{ID: id}}
+	result := db.First(&info, "ID = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if info.Author != author {
+		return ErrPermissionDenied
+	}
+	return nil
+}
+
 func (db *DataBase) GetTaskData(id uint, author string) (*TaskData, error) {
 	info := &taskInfo{Model: gorm.Model{ID: id}}
 	result := db.First(&info, "ID = ?", id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	// if info.Author != author {
-	// 	return nil, ErrPermissionDenied
-	// }
 	data := info.toTaskData()
 	return &data, nil
 }
 
 func (db *DataBase) UpdateTaskData(data *TaskData) error {
-	if _, err := db.GetTaskData(data.ID, data.Author); err != nil {
+	if err := db.CheckTaskPermission(data.ID, data.Author); err != nil {
 		return err
 	}
 	result := db.Model(&taskInfo{}).Where("ID = ?", data.ID).Updates(taskInfo{
@@ -97,15 +106,14 @@ func (db *DataBase) UpdateTaskData(data *TaskData) error {
 }
 
 func (db *DataBase) DeleteTask(id uint, author string) error {
-	if _, err := db.GetTaskData(id, author); err != nil {
+	if err := db.CheckTaskPermission(id, author); err != nil {
 		return err
 	}
 	return db.Delete(&taskInfo{}, id).Error
 }
 
-func (db *DataBase) GetTasks(offset, batchSize int, author string) ([]TaskData, error) {
+func (db *DataBase) GetTasks(offset, batchSize int) ([]TaskData, error) {
 	var tasks []taskInfo
-	// result := db.Where("author = ?", author).Limit(batchSize).Offset(offset).Find(&tasks)
 	result := db.Limit(batchSize).Offset(offset).Find(&tasks)
 	data := make([]TaskData, 0, len(tasks))
 	for _, info := range tasks {

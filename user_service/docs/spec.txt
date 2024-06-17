@@ -44,3 +44,12 @@ curl -v -X POST 'localhost:8080/like?id=1' \
 Добавление просмотра:
 curl -v -X POST 'localhost:8080/view?id=1' \
 -H "Cookie: jwt="
+
+curl -v 'localhost:8080/task-stats?id=1' \
+-H "Cookie: jwt="
+
+curl -v 'localhost:8080/top-tasks?sort_by=likes' \
+-H "Cookie: jwt="
+
+curl -v 'localhost:8080/top-users' \
+-H "Cookie: jwt="
