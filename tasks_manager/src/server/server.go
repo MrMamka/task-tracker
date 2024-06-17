@@ -62,7 +62,7 @@ func (s *Server) DeleteTask(ctx context.Context, req *pb.DeleteTaskRequest) (*em
 }
 
 func (s *Server) GetTasks(ctx context.Context, req *pb.GetTasksRequest) (*pb.GetTasksReponse, error) {
-	data, err := s.db.GetTasks(int(req.Offset), int(req.BatchSize), req.Author)
+	data, err := s.db.GetTasks(int(req.Offset), int(req.BatchSize))
 	if err != nil {
 		return nil, err
 	}

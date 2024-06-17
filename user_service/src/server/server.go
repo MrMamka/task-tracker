@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 	pb "userservice/proto"
+	statpb "userservice/proto/statistic"
 	"userservice/src/auth"
 	"userservice/src/broker"
 	"userservice/src/database"
@@ -25,6 +26,7 @@ type Server struct {
 	db      *database.DataBase
 	auth    *auth.AuthService
 	taskMan pb.TaskServiceClient
+	statMan statpb.StatisticsServiceClient
 	broker  *broker.Broker
 }
 
@@ -52,6 +54,10 @@ func (s *Server) Register() {
 
 	s.mux.Post("/like", s.addLike)
 	s.mux.Post("/view", s.addView)
+
+	s.mux.Get("/task-stats", s.taskStats)
+	s.mux.Get("/top-tasks", s.topTasks)
+	s.mux.Get("/top-users", s.topUsers)
 }
 
 func (s *Server) Listen(addr string) {
@@ -59,13 +65,23 @@ func (s *Server) Listen(addr string) {
 	if tasksManAddr == "" {
 		tasksManAddr = "tasks_manager:8081"
 	}
-	conn, err := grpc.Dial(tasksManAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	taskManConn, err := grpc.Dial(tasksManAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	defer taskManConn.Close()
+	s.taskMan = pb.NewTaskServiceClient(taskManConn)
 
-	s.taskMan = pb.NewTaskServiceClient(conn)
+	statisticsManAddr := os.Getenv("STATISTICS_SERVICE_ADDR")
+	if statisticsManAddr == "" {
+		statisticsManAddr = "statistics_service:8082"
+	}
+	statisticsManConn, err := grpc.Dial(statisticsManAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	defer statisticsManConn.Close()
+	s.statMan = statpb.NewStatisticsServiceClient(statisticsManConn)
 
 	fmt.Println("Server started.")
 	err = http.ListenAndServe(addr, s.mux)
@@ -338,7 +354,7 @@ func (s *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getTasks(w http.ResponseWriter, r *http.Request) {
-	login, ok := s.auth.CheckAuth(w, r)
+	_, ok := s.auth.CheckAuth(w, r)
 	if !ok {
 		return
 	}
@@ -366,9 +382,8 @@ func (s *Server) getTasks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tasksResp, err := s.taskMan.GetTasks(context.Background(), &pb.GetTasksRequest{
-		BatchSize: uint32(batchSize),
+		BatchSize: int32(batchSize),
 		Offset:    uint32(offset),
-		Author:    login,
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -410,7 +425,7 @@ func (s *Server) addLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.broker.SendLike(broker.Statistic{
-		Login: login,
+		Login:  login,
 		TaskID: uint(id),
 	})
 }
@@ -429,7 +444,115 @@ func (s *Server) addView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.broker.SendView(broker.Statistic{
-		Login: login,
+		Login:  login,
 		TaskID: uint(id),
 	})
+}
+
+type taskStats struct {
+	ID    int `json:"id"`
+	Likes int `json:"likes"`
+	Views int `json:"views"`
+}
+
+func (s *Server) taskStats(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Can not parse query: %v", err)
+		return
+	}
+
+	result, err := s.statMan.GetTaskStats(context.Background(), &statpb.GetTaskStatsRequest{
+		Id: uint32(id),
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Println("error getting task stats: ", err)
+		return
+	}
+
+	stat := taskStats{
+		ID:    id,
+		Likes: int(result.Likes),
+		Views: int(result.Views),
+	}
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "    ")
+	encoder.Encode(stat)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) getAuthors() (map[uint32]string, error) {
+	response, err := s.taskMan.GetTasks(context.Background(), &pb.GetTasksRequest{
+		BatchSize: -1,
+		Offset:    0,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	taksksAuthors := make(map[uint32]string, len(response.Tasks))
+	for _, task := range response.Tasks {
+		taksksAuthors[task.Id] = task.Author
+	}
+	return taksksAuthors, nil
+}
+
+func (s *Server) topTasks(w http.ResponseWriter, r *http.Request) {
+	var sort statpb.SortBy
+	sortBy := r.URL.Query().Get("sort_by")
+	if sortBy == "likes" {
+		sort = statpb.SortBy_likes
+	} else if sortBy == "views" {
+		sort = statpb.SortBy_views
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Undefind sort_by %s. Expected 'likes or 'views'", sortBy)
+		return
+	}
+
+	taksksAuthors, err := s.getAuthors()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	result, err := s.statMan.GetTopTasks(context.Background(), &statpb.GetTopTasksRequest{
+		Sort:    sort,
+		Authors: taksksAuthors,
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "    ")
+	for _, task := range result.Tasks {
+		encoder.Encode(task)
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) topUsers(w http.ResponseWriter, r *http.Request) {
+	taksksAuthors, err := s.getAuthors()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	result, err := s.statMan.GetTopUsers(context.Background(), &statpb.GetTopUsersRequest{
+		Authors: taksksAuthors,
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "    ")
+	for _, author := range result.Authors {
+		encoder.Encode(author)
+	}
+	w.WriteHeader(http.StatusOK)
 }

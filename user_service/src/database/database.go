@@ -33,10 +33,7 @@ type UserData struct {
 func New() *DataBase {
 	dsn := "host=user_db dbname=user_db sslmode=disable user=user password=password"
 
-	// db, err := sql.Open("postgres", dsn)
-
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-
 	if err != nil {
 		panic("failed to connect database: " + err.Error())
 	}

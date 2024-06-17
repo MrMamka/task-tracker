@@ -11,14 +11,14 @@ type DataBase struct {
 
 type likeStat struct {
 	gorm.Model
-	login string
-	id    uint
+	UserLogin string
+	TaskID    uint
 }
 
 type viewStat struct {
 	gorm.Model
-	login string
-	id    uint
+	UserLogin string
+	TaskID    uint
 }
 
 type Statistic struct {
@@ -40,14 +40,78 @@ func New() *DataBase {
 	return &DataBase{db}
 }
 
-func (db *DataBase) AddLike(stat Statistic) error {
-	info := &likeStat{login: stat.Login, id: stat.TaskID}
-	result := db.Create(info)
+func (db *DataBase) EnsureLike(stat Statistic) error {
+	var info likeStat
+	result := db.First(&info, "user_login = ? AND task_id = ?", stat.Login, stat.TaskID)
+	if result.Error == nil {
+		return nil
+	} else if result.Error != gorm.ErrRecordNotFound {
+		return result.Error
+	}
+
+	info = likeStat{UserLogin: stat.Login, TaskID: stat.TaskID}
+	result = db.Create(&info)
 	return result.Error
 }
 
-func (db *DataBase) AddView(stat Statistic) error {
-	info := &viewStat{login: stat.Login, id: stat.TaskID}
-	result := db.Create(info)
+func (db *DataBase) EnsureView(stat Statistic) error {
+	var info viewStat
+	result := db.First(&info, "user_login = ? AND task_id = ?", stat.Login, stat.TaskID)
+	if result.Error == nil {
+		return nil
+	} else if result.Error != gorm.ErrRecordNotFound {
+		return result.Error
+	}
+
+	info = viewStat{UserLogin: stat.Login, TaskID: stat.TaskID}
+	result = db.Create(&info)
 	return result.Error
+}
+
+func (db *DataBase) CountLikes(taskID uint) (count int64, err error) {
+	result := db.Model(&likeStat{}).Where("task_id = ?", taskID).Count(&count)
+	err = result.Error
+	return
+}
+
+func (db *DataBase) CountViews(taskID uint) (count int64, err error) {
+	result := db.Model(&viewStat{}).Where("task_id = ?", taskID).Count(&count)
+	err = result.Error
+	return
+}
+
+type TaskIDCount struct {
+	TaskID uint
+	Count  int64
+}
+
+func (db *DataBase) TopByLikes(n int) ([]TaskIDCount, error) {
+	var tasks []TaskIDCount
+	result := db.Model(&likeStat{}).
+		Group("task_id").
+		Select("task_id, COUNT(*) AS count").
+		Order("count DESC").
+		Limit(n).
+		Scan(&tasks)
+	return tasks, result.Error
+}
+
+func (db *DataBase) TopByViews(n int) ([]TaskIDCount, error) {
+	var tasks []TaskIDCount
+	result := db.Model(&viewStat{}).
+		Group("task_id").
+		Select("task_id, COUNT(*) AS count").
+		Order("count DESC").
+		Limit(n).
+		Scan(&tasks)
+	return tasks, result.Error
+}
+
+func (db *DataBase) GroupedLikes() ([]TaskIDCount, error) {
+	var tasks []TaskIDCount
+	result := db.Model(&likeStat{}).
+		Group("task_id").
+		Select("task_id, COUNT(*) AS count").
+		Scan(&tasks)
+	return tasks, result.Error
 }
