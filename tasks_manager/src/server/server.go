@@ -66,14 +66,19 @@ func (s *Server) GetTasks(ctx context.Context, req *pb.GetTasksRequest) (*pb.Get
 	if err != nil {
 		return nil, err
 	}
-	tasks := make([]*pb.Task, 0, len(data))
-	for _, task := range data {
-		tasks = append(tasks, DataToProto(&task))
-	}
+	tasks := dataToTasks(data)
 	return &pb.GetTasksReponse{
 		Tasks:  tasks,
 		Offset: req.Offset + uint32(len(data)),
 	}, nil
+}
+
+func dataToTasks(data []database.TaskData) []*pb.Task {
+	tasks := make([]*pb.Task, 0, len(data))
+	for _, task := range data {
+		tasks = append(tasks, DataToProto(&task))
+	}
+	return tasks
 }
 
 func New(db *database.DataBase) *Server {

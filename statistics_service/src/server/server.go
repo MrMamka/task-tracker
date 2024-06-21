@@ -47,18 +47,24 @@ func (s *Server) GetTopTasks(ctx context.Context, req *pb.GetTopTasksRequest) (*
 		return nil, err
 	}
 
+	result := extractTopTasks(topTasks, req.Authors)
+
+	return &pb.GetTopTasksResponse{
+		Tasks: result,
+	}, nil
+}
+
+func extractTopTasks(topTasks []database.TaskIDCount, authors map[uint32]string) []*pb.Task {
 	result := make([]*pb.Task, 0, len(topTasks))
 	for _, task := range topTasks {
 		result = append(result, &pb.Task{
 			Id:           uint32(task.TaskID),
 			LikesOrViews: int32(task.Count),
-			Author:       req.Authors[uint32(task.TaskID)],
+			Author:       authors[uint32(task.TaskID)],
 		})
 	}
 
-	return &pb.GetTopTasksResponse{
-		Tasks: result,
-	}, nil
+	return result
 }
 
 func (s *Server) GetTopUsers(ctx context.Context, req *pb.GetTopUsersRequest) (*pb.GetTopUsersResponse, error) {
@@ -70,7 +76,16 @@ func (s *Server) GetTopUsers(ctx context.Context, req *pb.GetTopUsersRequest) (*
 	for _, like := range likes {
 		authorsLikes[req.Authors[uint32(like.TaskID)]] += like.Count
 	}
-	var authors []*pb.Author
+
+	authors := extractTopAuthors(authorsLikes)
+
+	return &pb.GetTopUsersResponse{
+		Authors: authors,
+	}, nil
+}
+
+func extractTopAuthors(authorsLikes map[string]int64) []*pb.Author {
+	authors := make([]*pb.Author, 0, len(authorsLikes))
 	for login, count := range authorsLikes {
 		authors = append(authors, &pb.Author{
 			Login: login,
@@ -83,10 +98,7 @@ func (s *Server) GetTopUsers(ctx context.Context, req *pb.GetTopUsersRequest) (*
 	if len(authors) > 3 {
 		authors = authors[:3]
 	}
-
-	return &pb.GetTopUsersResponse{
-		Authors: authors,
-	}, nil
+	return authors
 }
 
 func (s *Server) RegisterAndListen(addr string) {
