@@ -299,7 +299,7 @@ paths:
           required: true
       responses:
         '200':
-          description: Лайк потавлен успешно
+          description: Лайк поставлен успешно
         '400':
           description: Невалидные данные
         '401':
